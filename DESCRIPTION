@@ -2,7 +2,7 @@ Package: dptviz
 Maintainer: Jeffrey Bhasin <jeffb@case.edu>
 Author: Jeffrey Bhasin <jeffb@case.edu>
 Version: 0.1
-License: GPL-3
+License: MIT
 Title: dptviz
 Description: Visualize differentially methylated regions detected by iDPT
 Depends:
