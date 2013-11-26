@@ -6,16 +6,20 @@ License: MIT
 Title: dptviz
 Description: Visualize differentially methylated regions detected by iDPT
 Depends:
-    GenomicRanges,
-    Biostrings,
-    stringr,
-    httr,
-    RCurl,
-    plyr,
-    R.utils
+	stringr,
+	reshape,
+	ShortRead,
+	goldmine,
+	foreach,
+	ggplot2,
+	doMC,
+	BSgenome,
+	Biostrings,
+	IRanges
 Suggests:
     testthat,
     roxygen2
 Collate:
     'dptviz-package.r'
+	'viz.r'
 
