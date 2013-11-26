@@ -1,0 +1,21 @@
+Package: dptviz
+Maintainer: Jeffrey Bhasin <jeffb@case.edu>
+Author: Jeffrey Bhasin <jeffb@case.edu>
+Version: 0.1
+License: GPL-3
+Title: dptviz
+Description: Visualize differentially methylated regions detected by iDPT
+Depends:
+    GenomicRanges,
+    Biostrings,
+    stringr,
+    httr,
+    RCurl,
+    plyr,
+    R.utils
+Suggests:
+    testthat,
+    roxygen2
+Collate:
+    'dptviz-package.r'
+
