@@ -6,15 +6,15 @@
 # Main Report Functions
 
 # -------------------------------------------------------------------
-# ' Summary plots of data preprocessed in bins by iDPT
-# '
-# ' iDPT performs a preprocessing stage to convert a set of alignments in a BAM file to average coverage values in windows of a user-specified size genome-wide. This function saves a PDF file containing plots that summarize the distribution of these average coverage values and their relationship to CpG density on a specified reference genome.
-# ' @param dptpath Path to a folder containing an iDPT run (the folder than contains the "DPT_ws" folder)
-# ' @param chrs A vector of chromosome names to use (by default, the autosomes and sex chromosomes from hg19)
-# ' @param bsgenome A BSgenome object for the reference genome used in the alignments contained in the input BAM files given to iDPT (i.e. for UCSC's hg19, you would load "library(BSgenome.Hsapiens.UCSC.hg19)" and give BSgenome.Hsapiens.UCSC.hg19 to this argument). This is needed to compute CpG density in the windows used by iDPT.
-# ' @param file Filename to save the PDF report to (if NULL, will use the name of the folder as a prefix and save "prefix.reportPrepro.pdf" in the current working directory")
-# ' @param ncore Number of concurrent threads to use
-# ' @export
+#' Summary plots of data preprocessed in bins by iDPT
+#'
+#' iDPT performs a preprocessing stage to convert a set of alignments in a BAM file to average coverage values in windows of a user-specified size genome-wide. This function saves a PDF file containing plots that summarize the distribution of these average coverage values and their relationship to CpG density on a specified reference genome.
+#' @param dptpath Path to a folder containing an iDPT run (the folder that contains the "DPT_ws" folder)
+#' @param chrs A vector of chromosome names to use (by default, the autosomes and sex chromosomes from hg19)
+#' @param bsgenome A BSgenome object for the reference genome used in the alignments contained in the input BAM files given to iDPT (i.e. for UCSC's hg19, you would load "library(BSgenome.Hsapiens.UCSC.hg19)" and give BSgenome.Hsapiens.UCSC.hg19 to this argument). This is needed to compute CpG density in the windows used by iDPT.
+#' @param file Filename to save the PDF report to (if NULL, will use the name of the folder as a prefix and save "prefix.reportPrepro.pdf" in the current working directory")
+#' @param ncore Number of concurrent threads to use
+#' @export
 reportPrepro <- function(dptpath, chrs=c(sapply(seq(1,22),function(x) paste("chr",x,sep="")),"chrX","chrY"), bsgenome, file=NULL, ncore=1)
 {
 	# Set number of cores for %dopar%
@@ -134,7 +134,31 @@ reportPrepro <- function(dptpath, chrs=c(sapply(seq(1,22),function(x) paste("chr
 
 # -------------------------------------------------------------------
 # ' Summary plots of sites detected by iDPT
+#'
+#' iDPT performs a preprocessing stage to convert a set of alignments in a BAM file to average coverage values in windows of a user-specified size genome-wide. This function saves a PDF file containing plots that summarize the distribution of these average coverage values and their relationship to CpG density on a specified reference genome.
+#' @param dptpath Path to a folder containing an iDPT run (the folder that contains the "DPT_ws" folder)
+#' @param sitespath Path to the "sites" csv file output from running iDPT (if NULL, will search for a "*.sites.csv" file in dptpath and choose the first one it finds)
+#' @param chrs A vector of chromosome names to use (by default, the autosomes and sex chromosomes from hg19)
+#' @param file Filename to save the PDF report to (if NULL, will use the name of the folder as a prefix and save "prefix.reportPrepro.pdf" in the current working directory")
+#' @param ncore Number of concurrent threads to use
+#' @export
+reportSites <- function(dptpath, sitespath=NULL, chrs=c(sapply(seq(1,22),function(x) paste("chr",x,sep="")),"chrX","chrY"), file=NULL, ncore=1)
+{
+	# Set number of cores for %dopar%
+	registerDoMC(ncore)
 
+	# Set filename using dptpath if none given as argument
+	if(is.null(file))
+	{
+		prefix <- str_split(dptpath, "/")[[1]]
+		prefix <- prefix[length(prefix)]
+		file <- paste(prefix, ".reportSites.pdf", sep="")
+	}
+
+	
+
+	NULL
+}
 # -------------------------------------------------------------------
 
 # -------------------------------------------------------------------
@@ -202,5 +226,56 @@ getCpG <- function(gr, bsgenome)
 		cpgfreq
 	}
 	out
+}
+
+# Read an iDPT sites CSV as a data.frame
+readSitesCSV <- function(dptpath)
+{
+	# Set pattern and contrast as character class
+	csv <- read.csv(file=dptpath, header=TRUE, stringsAsFactors=FALSE, nrows=5)
+	classes <- sapply(csv, class)
+	classes[c(5,6)] <- "character"
+	csv <- read.csv(file=dptpath, header=TRUE, colClasses=classes)
+	csv
+}
+
+# Take a vector of binary indicators, and flip their state (i.e. 0->1 and 1->0 so 101 becomes 010)
+invertBinary <- function(bin)
+{
+	bin <- str_replace_all(bin, "0", "A")
+	bin <- str_replace_all(bin, "1", "B")
+	bin <- str_replace_all(bin, "A", "1")
+	bin <- str_replace_all(bin, "B", "0")
+	bin
+}
+
+# flip the fold change ratio in cases where the contrast is opposite to the pattern
+fixContrasts <- function(sites)
+{
+	# The all "1" state pattern for this number of samples
+	allpatt <- paste(rep(1,str_length(sites[1,]$pattern)),collapse="")
+
+	# Grab all sites where contrast does not match pattern and pattern is not 111
+	s.index <- (sites$pattern!=sites$contrast)&(sites$pattern!=allpatt)
+	s <- sites[s.index,]
+
+	# Invert the binary of the contrast
+	s$contrast <- invertBinary(s$contrast)
+
+	# Flip the sign of the ratio
+	s$ratio <- s$ratio*-1
+
+	# Merge back with the original results and return
+	sites[s.index,] <- s
+
+	# Take all negative ratio pattern 111 and invert the contrast/flip the sign
+	s.index <- ((sites$pattern==allpatt)&(sites$ratio<0))
+	s <- sites[s.index,]
+	s$contrast <- invertBinary(s$contrast)
+	sites[s.index,] <- s
+
+	# Join "111" sites with their contrasts as patterns
+	sites[sites$pattern==allpatt,]$pattern <- paste(sites[sites$pattern==allpatt,]$pattern, sites[sites$pattern==allpatt,]$contrast, sep="_")
+	sites
 }
 # ###################################################################
